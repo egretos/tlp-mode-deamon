@@ -9,6 +9,7 @@ Homepage: https://github.com/egretos/tlp-mode-daemon
 
 Package: tlp-mode-daemon
 Architecture: all
-Depends: ${misc:Depends}, tlp, python3, python3-pyside6, pkexec | policykit-1 | sudo, systemd
+Depends: ${misc:Depends}, tlp, python3, pkexec | policykit-1 | sudo, systemd
+Recommends: python3-pyside6
 Description: TLP profile switcher with tray UI
  Lightweight TLP profile switcher with a CLI and optional tray UI.
