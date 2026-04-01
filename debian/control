@@ -1,11 +1,11 @@
 Source: tlp-mode-daemon
 Section: utils
 Priority: optional
-Maintainer: Egretos <egretos@localhost>
+Maintainer: Egretos <egretos@proton.me>
 Build-Depends: debhelper-compat (= 13)
 Standards-Version: 4.6.2
 Rules-Requires-Root: no
-Homepage: https://example.com/tlp-mode-daemon
+Homepage: https://github.com/egretos/tlp-mode-daemon
 
 Package: tlp-mode-daemon
 Architecture: all

@@ -16,6 +16,10 @@ Opinionated TLP profile switcher with a lightweight tray UI. It provides two pro
 - `pkexec` or `sudo` available
 - Tray UI: Python 3 + `PySide6`
 
+## Tested Hardware
+
+- Lenovo ThinkPad T480 (Intel Core i7-8650U)
+
 ## Quick Install
 
 ```bash

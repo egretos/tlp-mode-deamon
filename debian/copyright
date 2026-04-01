@@ -1,6 +1,6 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: tlp-mode-daemon
-Source: https://example.com/tlp-mode-daemon
+Source: https://github.com/egretos/tlp-mode-daemon
 
 Files: *
 Copyright: 2026 Egretos
