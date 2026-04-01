@@ -7,6 +7,17 @@ if [ "$1" = "configure" ]; then
       sudo -u "$SUDO_USER" create-tlp-icons >/dev/null 2>&1 || true
     fi
   fi
+
+  if [ -n "$SUDO_USER" ]; then
+    UID_NUM="$(id -u "$SUDO_USER" 2>/dev/null || true)"
+    if [ -n "$UID_NUM" ] && [ -d "/run/user/$UID_NUM" ]; then
+      XDG_RUNTIME_DIR="/run/user/$UID_NUM"
+      if [ -S "$XDG_RUNTIME_DIR/bus" ]; then
+        sudo -u "$SUDO_USER" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user daemon-reload >/dev/null 2>&1 || true
+        sudo -u "$SUDO_USER" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user enable --now tlp-tray.service >/dev/null 2>&1 || true
+      fi
+    fi
+  fi
 fi
 
 exit 0
