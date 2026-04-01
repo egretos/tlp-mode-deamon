@@ -86,6 +86,46 @@ turbo_state() {
   echo "$turbo"
 }
 
+expected_turbo() {
+  case "$1" in
+    cold) echo "off" ;;
+    desk) echo "on" ;;
+    *) echo "n/a" ;;
+  esac
+}
+
+expected_epp() {
+  case "$1" in
+    cold) echo "balance_power" ;;
+    desk) echo "balance_performance" ;;
+    *) echo "n/a" ;;
+  esac
+}
+
+wait_for_state() {
+  local mode="$1"
+  local want_turbo
+  local want_epp
+  local i
+
+  want_turbo="$(expected_turbo "$mode")"
+  want_epp="$(expected_epp "$mode")"
+
+  for i in {1..6}; do
+    local have_turbo
+    local have_epp
+    have_turbo="$(turbo_state)"
+    have_epp="$(cpu_epp)"
+
+    if [[ "$want_turbo" == "n/a" || "$have_turbo" == "$want_turbo" ]]; then
+      if [[ "$want_epp" == "n/a" || "$have_epp" == "$want_epp" ]]; then
+        return
+      fi
+    fi
+    sleep 0.1
+  done
+}
+
 cpu_temp() {
   local temp="n/a"
   if [[ -r /proc/acpi/ibm/thermal ]]; then
@@ -108,7 +148,17 @@ mode_label() {
 
 notification_body() {
   local mode="$1"
-  echo "$(mode_label "$mode") mode enabled. Power: $(power_source), Turbo: $(turbo_state), Temp: $(cpu_temp), EPP: $(cpu_epp)."
+  local power
+  local turbo
+  local temp
+  local epp
+
+  power="$(power_source)"
+  turbo="$(turbo_state)"
+  temp="$(cpu_temp)"
+  epp="$(cpu_epp)"
+
+  echo "$(mode_label "$mode") mode enabled. Power: $power, Turbo: $turbo, Temp: $temp, EPP: $epp."
 }
 
 write_mode_file() {
@@ -132,7 +182,9 @@ write_mode_file() {
   if [[ "$mode" == "cold" ]]; then
     cat >"$tmp" <<'EOF'
 CPU_ENERGY_PERF_POLICY_ON_AC=balance_power
+CPU_ENERGY_PERF_POLICY_ON_BAT=balance_power
 CPU_MAX_PERF_ON_AC=55
+CPU_MAX_PERF_ON_BAT=55
 CPU_BOOST_ON_AC=0
 CPU_BOOST_ON_BAT=0
 RUNTIME_PM_ON_AC=auto
@@ -141,8 +193,11 @@ EOF
   else
     cat >"$tmp" <<'EOF'
 CPU_ENERGY_PERF_POLICY_ON_AC=balance_performance
+CPU_ENERGY_PERF_POLICY_ON_BAT=balance_performance
 CPU_MAX_PERF_ON_AC=100
+CPU_MAX_PERF_ON_BAT=100
 CPU_BOOST_ON_AC=1
+CPU_BOOST_ON_BAT=1
 RUNTIME_PM_ON_AC=on
 WIFI_PWR_ON_AC=off
 EOF
@@ -155,6 +210,7 @@ EOF
 apply_mode() {
   local mode="$1"
   write_mode_file "$mode"
+  wait_for_state "$mode"
   notify "Thermal Mode: $(mode_label "$mode")" "$(notification_body "$mode")"
 }
 

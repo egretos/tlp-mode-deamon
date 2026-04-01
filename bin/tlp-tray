@@ -264,13 +264,18 @@ class TrayApp:
         self.tray.setIcon(get_mode_icon(self.app, mode))
         self.tray.setToolTip(f"{MODES[mode]['label']} mode enabled.")
         status = read_sys_status()
+        target = {
+            "turbo": "on" if mode == "desk" else "off",
+            "epp": "balance_performance" if mode == "desk" else "balance_power",
+            "max_perf": "100%" if mode == "desk" else "55%",
+        }
         self.tray.showMessage(
             "TLP Mode",
-            f"{MODES[mode]['label']} mode enabled. "
+            f"Enabling {MODES[mode]['label']} mode. "
             f"Power: {status['power']}, "
-            f"Turbo: {status['turbo']}, "
-            f"Temp: {status['temp']}, "
-            f"EPP: {status['epp']}.",
+            f"Target: Turbo {target['turbo']}, "
+            f"EPP {target['epp']}, "
+            f"Max perf {target['max_perf']}.",
             QSystemTrayIcon.NoIcon,
         )
 
