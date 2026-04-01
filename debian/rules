@@ -3,6 +3,9 @@
 %:
 	dh $@
 
+override_dh_auto_build:
+	# Nothing to build
+
 override_dh_auto_install:
 	install -D -m 0755 bin/tlp-mode debian/tlp-mode-daemon/usr/bin/tlp-mode
 	install -D -m 0755 bin/tlp-tray debian/tlp-mode-daemon/usr/bin/tlp-tray
