@@ -1,1 +1,7 @@
 .vscode/
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/files
+debian/*.debhelper
+debian/*.substvars
+debian/tlp-mode-daemon/
