@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+
+# Stop tray for the invoking user if possible
+if [ -n "$SUDO_USER" ]; then
+  if command -v systemctl >/dev/null 2>&1; then
+    sudo -u "$SUDO_USER" systemctl --user disable --now tlp-tray.service >/dev/null 2>&1 || true
+  fi
+fi
+
+# Best-effort: kill any running tray process
+pkill -f tlp-tray >/dev/null 2>&1 || true
+
+exit 0
