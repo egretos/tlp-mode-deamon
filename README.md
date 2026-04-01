@@ -1,5 +1,7 @@
 # TLP Mode Daemon
 
+[![Build and Release](https://github.com/egretos/tlp-mode-daemon/actions/workflows/release.yml/badge.svg)](https://github.com/egretos/tlp-mode-daemon/actions/workflows/release.yml)
+
 Opinionated TLP profile switcher with a lightweight tray UI. It provides two profiles (`cold` and `desk`), a CLI to switch them, and a KDE-friendly tray app. The tray is optional; the CLI works on any desktop.
 
 ## Features
