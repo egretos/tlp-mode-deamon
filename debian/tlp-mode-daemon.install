@@ -1,0 +1,11 @@
+usr/bin/tlp-mode
+usr/bin/tlp-tray
+usr/bin/create-tlp-icons
+usr/sbin/tlp-mode-root
+usr/lib/systemd/user/tlp-tray.service
+usr/share/applications/tlp-tray.desktop
+usr/share/doc/tlp-mode-daemon/README.md
+usr/share/doc/tlp-mode-daemon/CONFIG.md
+usr/share/doc/tlp-mode-daemon/INSTALL.md
+usr/share/doc/tlp-mode-daemon/UNINSTALL.md
+usr/share/doc/tlp-mode-daemon/TROUBLESHOOTING.md

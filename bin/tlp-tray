@@ -1,0 +1,347 @@
+#!/usr/bin/env python3
+import os
+import sys
+import subprocess
+import shutil
+from pathlib import Path
+from datetime import datetime
+
+try:
+    from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QWidget, QVBoxLayout, QLabel, QTableWidget, QTableWidgetItem
+    from PySide6.QtGui import QIcon, QAction, QPainter
+    from PySide6.QtCore import QTimer, Qt, QProcess, QProcessEnvironment
+    from PySide6.QtWidgets import QStyle
+except ImportError:
+    print("PySide6 not installed. Run: pip install pyside6")
+    sys.exit(1)
+
+
+MODE_FILE = Path(os.environ.get("TLP_MODE_FILE", "/etc/tlp.d/30-mode-active.conf"))
+LOG_FILE = Path.home() / ".local/share/tlp-mode-daemon/tlp-tray.log"
+CPU_EPP = Path("/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference")
+NO_TURBO = Path("/sys/devices/system/cpu/intel_pstate/no_turbo")
+AC_FILE = Path("/sys/class/power_supply/AC/online")
+if not AC_FILE.exists():
+    AC_FILE = Path("/sys/class/power_supply/ACAD/online")
+
+MODES = {
+    "cold": {
+        "label": "Cold",
+        "icon": "🧊",
+        "settings": [
+            ("Energy Policy", "balance_power", "balance_performance"),
+            ("CPU Max Perf", "55%", "100%"),
+            ("Turbo Boost", "Disabled", "Enabled"),
+            ("Runtime PM", "auto", "on"),
+            ("WiFi Power", "on", "off"),
+        ]
+    },
+    "desk": {
+        "label": "Desk",
+        "icon": "🖥️",
+        "settings": [
+            ("Energy Policy", "balance_performance", "balance_power"),
+            ("CPU Max Perf", "100%", "55%"),
+            ("Turbo Boost", "Enabled", "Disabled"),
+            ("Runtime PM", "on", "auto"),
+            ("WiFi Power", "off", "on"),
+        ]
+    }
+}
+
+THEME_ICONS = {
+    "cold": "power-profile-power-saver-symbolic",
+    "desk": "power-profile-performance-symbolic",
+}
+
+def resolve_tlp_mode():
+    env_path = os.environ.get("TLP_MODE_BIN")
+    if env_path:
+        return env_path
+
+    local_path = Path(__file__).resolve().parent / "tlp-mode"
+    if local_path.exists():
+        return str(local_path)
+
+    resolved = shutil.which("tlp-mode")
+    if resolved:
+        return resolved
+
+    return "/usr/local/bin/tlp-mode"
+
+
+TLP_MODE_BIN = resolve_tlp_mode()
+
+
+def get_mode_icon(app, mode):
+    text_color = app.palette().windowText().color()
+    icon = QIcon.fromTheme(THEME_ICONS.get(mode, ""))
+    if not icon.isNull():
+        pixmap = icon.pixmap(22, 22)
+        if not pixmap.isNull():
+            painter = QPainter(pixmap)
+            painter.setCompositionMode(QPainter.CompositionMode_SourceIn)
+            painter.fillRect(pixmap.rect(), text_color)
+            painter.end()
+            return QIcon(pixmap)
+        return icon
+
+    fallback_style_icon = QStyle.SP_ComputerIcon if mode == "desk" else QStyle.SP_DesktopIcon
+    return app.style().standardIcon(fallback_style_icon)
+
+
+def get_current_mode():
+    if not MODE_FILE.exists():
+        return "cold"
+    content = MODE_FILE.read_text()
+    if "CPU_MAX_PERF_ON_AC=55" in content:
+        return "cold"
+    return "desk"
+
+
+def read_sys_status():
+    power = "BAT"
+    try:
+        if AC_FILE.exists() and AC_FILE.read_text().strip() == "1":
+            power = "AC"
+    except Exception:
+        power = "n/a"
+
+    turbo = "n/a"
+    try:
+        if NO_TURBO.exists():
+            turbo = "off" if NO_TURBO.read_text().strip() == "1" else "on"
+    except Exception:
+        turbo = "n/a"
+
+    epp = "n/a"
+    try:
+        if CPU_EPP.exists():
+            epp = CPU_EPP.read_text().strip()
+    except Exception:
+        epp = "n/a"
+
+    temp = "n/a"
+    try:
+        if Path("/proc/acpi/ibm/thermal").exists():
+            data = Path("/proc/acpi/ibm/thermal").read_text().split()
+            for token in data:
+                if token.isdigit():
+                    temp = f"{token}C"
+                    break
+    except Exception:
+        temp = "n/a"
+
+    return {
+        "power": power,
+        "turbo": turbo,
+        "temp": temp,
+        "epp": epp,
+    }
+
+
+class TrayWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setup_ui()
+    
+    def setup_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(15, 10, 15, 10)
+        
+        mode = get_current_mode()
+        mode_data = MODES[mode]
+        
+        title = QLabel(f"<b>{mode_data['icon']} {mode_data['label']} Mode</b>")
+        title.setStyleSheet("font-size: 14px;")
+        layout.addWidget(title)
+        
+        table = QTableWidget(5, 3)
+        table.setHorizontalHeaderLabels(["Setting", "Cold ❄️", "Desk 🖥️"])
+        table.verticalHeader().setVisible(False)
+        table.setShowGrid(False)
+        table.setMaximumWidth(320)
+        
+        for row, (setting, cold_val, desk_val) in enumerate(mode_data["settings"]):
+            table.setItem(row, 0, QTableWidgetItem(setting))
+            table.setItem(row, 1, QTableWidgetItem(cold_val))
+            table.setItem(row, 2, QTableWidgetItem(desk_val))
+            
+            current_val = cold_val if mode == "cold" else desk_val
+            other_col = 2 if mode == "cold" else 1
+            
+            table.item(row, 1).setTextAlignment(Qt.AlignCenter)
+            table.item(row, 2).setTextAlignment(Qt.AlignCenter)
+            
+            if table.item(row, other_col).text() == current_val:
+                for col in range(3):
+                    table.item(row, col).setBackground(Qt.yellow)
+        
+        table.resizeColumnsToContents()
+        table.setColumnWidth(0, 110)
+        layout.addWidget(table)
+        
+        layout.addSpacing(10)
+        
+        info_label = QLabel("<small>Left-click to toggle | Right-click for menu</small>")
+        info_label.setStyleSheet("color: gray;")
+        layout.addWidget(info_label)
+        
+        self.setMinimumWidth(350)
+        self.setStyleSheet("""
+            QWidget { background: palette(window); }
+            QTableWidget { border: none; background: transparent; }
+            QTableWidget::item { padding: 4px; }
+        """)
+
+
+class TrayApp:
+    def __init__(self):
+        from PySide6.QtWidgets import QApplication
+        self.app = QApplication(sys.argv)
+        self.app.setQuitOnLastWindowClosed(False)
+        
+        self.tray = QSystemTrayIcon()
+        
+        mode = get_current_mode()
+        self.tray.setIcon(get_mode_icon(self.app, mode))
+        
+        self.menu = QMenu()
+        
+        self.status_action = QAction("Status", self.menu)
+        self.status_action.setEnabled(False)
+        self.menu.addAction(self.status_action)
+        
+        self.menu.addSeparator()
+        
+        cold_action = QAction("❄️ Switch to Cold", self.menu)
+        cold_action.triggered.connect(lambda: self.switch_mode("cold"))
+        self.menu.addAction(cold_action)
+        
+        desk_action = QAction("🖥️ Switch to Desk", self.menu)
+        desk_action.triggered.connect(lambda: self.switch_mode("desk"))
+        self.menu.addAction(desk_action)
+        
+        self.menu.addSeparator()
+        
+        refresh_action = QAction("🔄 Refresh", self.menu)
+        refresh_action.triggered.connect(self.update_icon)
+        self.menu.addAction(refresh_action)
+        
+        self.menu.addSeparator()
+        
+        quit_action = QAction("❌ Quit", self.menu)
+        quit_action.triggered.connect(self.app.quit)
+        self.menu.addAction(quit_action)
+        
+        self.tray.setContextMenu(self.menu)
+        self.tray.activated.connect(self.on_tray_activated)
+
+        self.tray_watchdog = QTimer(self.app)
+        self.tray_watchdog.timeout.connect(self.ensure_tray_present)
+        self.tray_watchdog.start(30000)
+
+        self.switch_proc = None
+        self.pending_mode = None
+        self.previous_mode = None
+        self.ensure_tray_present()
+        self.update_icon()
+    
+    def on_tray_activated(self, reason):
+        if reason == QSystemTrayIcon.Trigger:
+            current = get_current_mode()
+            new_mode = "desk" if current == "cold" else "cold"
+            self.switch_mode(new_mode)
+        elif reason == QSystemTrayIcon.Context:
+            pass
+    
+    def switch_mode(self, mode):
+        if self.switch_proc and self.switch_proc.state() != QProcess.NotRunning:
+            return
+
+        self.previous_mode = get_current_mode()
+        self.pending_mode = mode
+        self.tray.setIcon(get_mode_icon(self.app, mode))
+        self.tray.setToolTip(f"{MODES[mode]['label']} mode enabled.")
+        status = read_sys_status()
+        self.tray.showMessage(
+            "TLP Mode",
+            f"{MODES[mode]['label']} mode enabled. "
+            f"Power: {status['power']}, "
+            f"Turbo: {status['turbo']}, "
+            f"Temp: {status['temp']}, "
+            f"EPP: {status['epp']}.",
+            QSystemTrayIcon.NoIcon,
+        )
+
+        self.switch_proc = QProcess(self.app)
+        self.switch_proc.finished.connect(self.on_switch_finished)
+        env = QProcessEnvironment.systemEnvironment()
+        env.insert("TLP_MODE_NO_NOTIFY", "1")
+        self.switch_proc.setProcessEnvironment(env)
+        self.switch_proc.start(TLP_MODE_BIN, [mode])
+
+    def on_switch_finished(self, exit_code, exit_status):
+        stdout = bytes(self.switch_proc.readAllStandardOutput()).decode("utf-8", "replace")
+        stderr = bytes(self.switch_proc.readAllStandardError()).decode("utf-8", "replace")
+        success = exit_code == 0
+
+        if not success:
+            self.log_failure(exit_code, stdout, stderr)
+            self.tray.showMessage(
+                "TLP Mode",
+                "Mode switch failed. Reverting icon.",
+                QSystemTrayIcon.NoIcon,
+            )
+            if self.previous_mode:
+                self.tray.setIcon(get_mode_icon(self.app, self.previous_mode))
+
+        self.pending_mode = None
+        self.previous_mode = None
+        self.update_icon()
+
+        LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    def log_failure(self, exit_code, stdout, stderr):
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with LOG_FILE.open("a", encoding="utf-8") as handle:
+            handle.write(f"[{timestamp}] tlp-mode failed (exit {exit_code})\n")
+            if stdout.strip():
+                handle.write(f"stdout:\n{stdout.strip()}\n")
+            if stderr.strip():
+                handle.write(f"stderr:\n{stderr.strip()}\n")
+            handle.write("\n")
+
+    def ensure_tray_present(self):
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            return
+
+        if not self.tray.isVisible():
+            self.tray.show()
+
+        if self.tray.icon().isNull():
+            self.tray.setIcon(get_mode_icon(self.app, get_current_mode()))
+    
+    def update_icon(self):
+        mode = get_current_mode()
+        mode_data = MODES[mode]
+        
+        status = read_sys_status()
+        self.tray.setToolTip(
+            f"{mode_data['label']} mode enabled. "
+            f"Power: {status['power']}, "
+            f"Turbo: {status['turbo']}, "
+            f"Temp: {status['temp']}, "
+            f"EPP: {status['epp']}."
+        )
+        
+        self.status_action.setText(f"Current: {mode_data['icon']} {mode_data['label']}")
+        
+        self.tray.setIcon(get_mode_icon(self.app, mode))
+    
+    def run(self):
+        return self.app.exec()
+
+
+if __name__ == "__main__":
+    app = TrayApp()
+    sys.exit(app.run())

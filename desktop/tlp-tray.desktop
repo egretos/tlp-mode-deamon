@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=TLP Mode Tray
+Exec=/usr/local/bin/tlp-tray
+Icon=power-profile-performance-symbolic
+Terminal=false
+Categories=System;Utility;

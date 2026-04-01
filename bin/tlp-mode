@@ -1,0 +1,182 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MODE_FILE="${TLP_MODE_FILE:-/etc/tlp.d/30-mode-active.conf}"
+ROOT_HELPER="${TLP_MODE_ROOT_HELPER:-/usr/local/sbin/tlp-mode-root}"
+TLP_BIN="${TLP_BIN:-/usr/sbin/tlp}"
+CPU_EPP="/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference"
+NO_TURBO="/sys/devices/system/cpu/intel_pstate/no_turbo"
+AC_FILE="/sys/class/power_supply/AC/online"
+[[ -e "$AC_FILE" ]] || AC_FILE="/sys/class/power_supply/ACAD/online"
+
+notify() {
+  if [[ "${TLP_MODE_NO_NOTIFY:-}" == "1" ]]; then
+    return
+  fi
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send "$1" "$2"
+  else
+    printf "%s: %s\n" "$1" "$2"
+  fi
+}
+
+run_as_root() {
+  local cmd="$1"
+
+  if command -v pkexec >/dev/null 2>&1; then
+    pkexec /bin/bash -lc "$cmd"
+    return
+  fi
+
+  if sudo -n /bin/bash -lc "$cmd" >/dev/null 2>&1; then
+    return
+  fi
+
+  if [[ -t 0 ]] || [[ -t 1 ]]; then
+    sudo /bin/bash -lc "$cmd"
+    return
+  fi
+
+  notify "TLP mode switch failed" "pkexec not found and no terminal available for sudo."
+  exit 1
+}
+
+current_mode() {
+  if [[ ! -r "$MODE_FILE" ]]; then
+    echo "default"
+    return
+  fi
+
+  if grep -q "^CPU_MAX_PERF_ON_AC=55$" "$MODE_FILE"; then
+    echo "cold"
+    return
+  fi
+
+  if grep -q "^CPU_MAX_PERF_ON_AC=100$" "$MODE_FILE"; then
+    echo "desk"
+    return
+  fi
+
+  echo "custom"
+}
+
+power_source() {
+  local source="BAT"
+  if [[ -r "$AC_FILE" ]] && [[ "$(cat "$AC_FILE")" == "1" ]]; then
+    source="AC"
+  fi
+  echo "$source"
+}
+
+cpu_epp() {
+  local epp="n/a"
+  [[ -r "$CPU_EPP" ]] && epp="$(cat "$CPU_EPP")"
+  echo "$epp"
+}
+
+turbo_state() {
+  local turbo="n/a"
+  if [[ -r "$NO_TURBO" ]]; then
+    if [[ "$(cat "$NO_TURBO")" == "1" ]]; then
+      turbo="off"
+    else
+      turbo="on"
+    fi
+  fi
+  echo "$turbo"
+}
+
+cpu_temp() {
+  local temp="n/a"
+  if [[ -r /proc/acpi/ibm/thermal ]]; then
+    temp="$(awk '{for (i=1; i<=NF; i++) if ($i ~ /^[0-9]+$/) {print $i "C"; exit}}' /proc/acpi/ibm/thermal)"
+  fi
+  echo "$temp"
+}
+
+status_line() {
+  echo "mode=$(current_mode) power=$(power_source) epp=$(cpu_epp) turbo=$(turbo_state) temp=$(cpu_temp)"
+}
+
+mode_label() {
+  case "$1" in
+    cold) echo "Cold" ;;
+    desk) echo "Desk" ;;
+    *) echo "Custom" ;;
+  esac
+}
+
+notification_body() {
+  local mode="$1"
+  echo "$(mode_label "$mode") mode enabled. Power: $(power_source), Turbo: $(turbo_state), Temp: $(cpu_temp), EPP: $(cpu_epp)."
+}
+
+write_mode_file() {
+  local mode="$1"
+
+  if [[ -x "$ROOT_HELPER" ]]; then
+    if sudo -n "$ROOT_HELPER" "$mode" >/dev/null 2>&1; then
+      return
+    fi
+    if [[ -t 0 ]] || [[ -t 1 ]]; then
+      sudo "$ROOT_HELPER" "$mode"
+      return
+    fi
+    notify "TLP mode switch failed" "Root helper exists but sudo password is required in a non-terminal context."
+    exit 1
+  fi
+
+  local tmp
+  tmp="$(mktemp)"
+
+  if [[ "$mode" == "cold" ]]; then
+    cat >"$tmp" <<'EOF'
+CPU_ENERGY_PERF_POLICY_ON_AC=balance_power
+CPU_MAX_PERF_ON_AC=55
+CPU_BOOST_ON_AC=0
+CPU_BOOST_ON_BAT=0
+RUNTIME_PM_ON_AC=auto
+WIFI_PWR_ON_AC=on
+EOF
+  else
+    cat >"$tmp" <<'EOF'
+CPU_ENERGY_PERF_POLICY_ON_AC=balance_performance
+CPU_MAX_PERF_ON_AC=100
+CPU_BOOST_ON_AC=1
+RUNTIME_PM_ON_AC=on
+WIFI_PWR_ON_AC=off
+EOF
+  fi
+
+  run_as_root "install -D -m 0644 '$tmp' '$MODE_FILE' && '$TLP_BIN' start"
+  rm -f "$tmp"
+}
+
+apply_mode() {
+  local mode="$1"
+  write_mode_file "$mode"
+  notify "Thermal Mode: $(mode_label "$mode")" "$(notification_body "$mode")"
+}
+
+case "${1:-status}" in
+  cold)
+    apply_mode "cold"
+    ;;
+  desk)
+    apply_mode "desk"
+    ;;
+  toggle)
+    if [[ "$(current_mode)" == "cold" ]]; then
+      apply_mode "desk"
+    else
+      apply_mode "cold"
+    fi
+    ;;
+  status)
+    status_line
+    ;;
+  *)
+    echo "Usage: $0 {cold|desk|toggle|status}"
+    exit 1
+    ;;
+esac

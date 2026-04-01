@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "configure" ]; then
+  if command -v create-tlp-icons >/dev/null 2>&1; then
+    if [ -n "$SUDO_USER" ]; then
+      sudo -u "$SUDO_USER" create-tlp-icons >/dev/null 2>&1 || true
+    fi
+  fi
+fi
+
+exit 0

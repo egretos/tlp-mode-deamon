@@ -1,0 +1,28 @@
+#!/bin/sh
+f=/etc/tlp.d/30-mode-active.conf
+case "$1" in
+cold)
+cat >"$f" <<'EOF'
+CPU_ENERGY_PERF_POLICY_ON_AC=balance_power
+CPU_MAX_PERF_ON_AC=55
+CPU_BOOST_ON_AC=0
+CPU_BOOST_ON_BAT=0
+RUNTIME_PM_ON_AC=auto
+WIFI_PWR_ON_AC=on
+EOF
+;;
+desk)
+cat >"$f" <<'EOF'
+CPU_ENERGY_PERF_POLICY_ON_AC=balance_performance
+CPU_MAX_PERF_ON_AC=100
+CPU_BOOST_ON_AC=1
+RUNTIME_PM_ON_AC=on
+WIFI_PWR_ON_AC=off
+EOF
+;;
+toggle)
+grep -q '^CPU_MAX_PERF_ON_AC=55$' "$f" 2>/dev/null && exec "$0" desk || exec "$0" cold
+;;
+*) exit 2;;
+esac
+/usr/sbin/tlp start

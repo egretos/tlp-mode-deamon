@@ -1,0 +1,33 @@
+name: tlp-mode-daemon
+base: core22
+version: '0.1.0'
+summary: TLP profile switcher with tray UI
+description: |
+  Opinionated TLP profile switcher with CLI and optional tray UI.
+
+grade: devel
+confinement: classic
+
+apps:
+  tlp-mode:
+    command: bin/tlp-mode
+  tlp-tray:
+    command: bin/tlp-tray
+    desktop: tlp-tray.desktop
+
+parts:
+  tlp-mode-daemon:
+    plugin: dump
+    source: .
+    organize:
+      bin/tlp-mode: bin/tlp-mode
+      bin/tlp-tray: bin/tlp-tray
+      bin/create-tlp-icons: bin/create-tlp-icons
+      root/tlp-mode-root: sbin/tlp-mode-root
+      systemd/tlp-tray.service: lib/systemd/user/tlp-tray.service
+      desktop/tlp-tray.desktop: share/applications/tlp-tray.desktop
+      README.md: share/doc/tlp-mode-daemon/README.md
+      docs/CONFIG.md: share/doc/tlp-mode-daemon/CONFIG.md
+      docs/INSTALL.md: share/doc/tlp-mode-daemon/INSTALL.md
+      docs/UNINSTALL.md: share/doc/tlp-mode-daemon/UNINSTALL.md
+      docs/TROUBLESHOOTING.md: share/doc/tlp-mode-daemon/TROUBLESHOOTING.md
