@@ -5,3 +5,4 @@ debian/files
 debian/*.debhelper
 debian/*.substvars
 debian/tlp-mode-daemon/
+dist/
