@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=TLP: Toggle Mode
+Exec=tlp-mode toggle
+Icon=power-profile-performance-symbolic
+Terminal=false
+NoDisplay=true
+Keywords=tlp;toggle;thermal;power;

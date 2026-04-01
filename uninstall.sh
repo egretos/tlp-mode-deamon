@@ -25,6 +25,7 @@ rm -f "$BINDIR/tlp-mode" "$BINDIR/tlp-tray" "$BINDIR/create-tlp-icons"
 rm -f "$SBINDIR/tlp-mode-root"
 rm -f "$SYSTEMD_USER_DIR/tlp-tray.service"
 rm -f "$DESKTOP_DIR/tlp-tray.desktop"
+rm -f "$DESKTOP_DIR/tlp-cold.desktop" "$DESKTOP_DIR/tlp-desk.desktop" "$DESKTOP_DIR/tlp-toggle.desktop"
 rm -f "$XDG_AUTOSTART_DIR/tlp-tray.desktop"
 
 echo "Uninstalled from $PREFIX."

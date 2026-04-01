@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=TLP: Cold Mode
+Exec=tlp-mode cold
+Icon=power-profile-power-saver-symbolic
+Terminal=false
+NoDisplay=true
+Keywords=tlp;cold;thermal;power;battery;

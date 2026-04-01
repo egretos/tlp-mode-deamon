@@ -13,6 +13,9 @@ override_dh_auto_install:
 	install -D -m 0755 root/tlp-mode-root debian/tlp-mode-daemon/usr/sbin/tlp-mode-root
 	install -D -m 0644 systemd/tlp-tray.service debian/tlp-mode-daemon/usr/lib/systemd/user/tlp-tray.service
 	install -D -m 0644 desktop/tlp-tray.desktop debian/tlp-mode-daemon/usr/share/applications/tlp-tray.desktop
+	install -D -m 0644 desktop/tlp-cold.desktop debian/tlp-mode-daemon/usr/share/applications/tlp-cold.desktop
+	install -D -m 0644 desktop/tlp-desk.desktop debian/tlp-mode-daemon/usr/share/applications/tlp-desk.desktop
+	install -D -m 0644 desktop/tlp-toggle.desktop debian/tlp-mode-daemon/usr/share/applications/tlp-toggle.desktop
 	install -D -m 0644 xdg-autostart/tlp-tray.desktop debian/tlp-mode-daemon/etc/xdg/autostart/tlp-tray.desktop
 	install -D -m 0644 README.md debian/tlp-mode-daemon/usr/share/doc/tlp-mode-daemon/README.md
 	install -D -m 0644 docs/CONFIG.md debian/tlp-mode-daemon/usr/share/doc/tlp-mode-daemon/CONFIG.md

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=TLP: Desk Mode
+Exec=tlp-mode desk
+Icon=power-profile-performance-symbolic
+Terminal=false
+NoDisplay=true
+Keywords=tlp;desk;thermal;power;performance;

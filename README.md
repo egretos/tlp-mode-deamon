@@ -58,6 +58,14 @@ tlp-tray
 
 If you installed the systemd user service, the tray will start on login. Use `systemctl --user status tlp-tray.service` to inspect it.
 
+## KRunner Keywords
+
+KRunner can run the profiles via keywords:
+
+- `tlp cold`
+- `tlp desk`
+- `tlp toggle`
+
 ## Configuration
 
 See `docs/CONFIG.md` for environment variables and profile edits.
