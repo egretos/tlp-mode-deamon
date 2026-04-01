@@ -13,6 +13,7 @@ This will:
 - Install the systemd user service for the tray
 - Enable and start the tray service
 - Generate optional user icons via `create-tlp-icons`
+- Install an XDG autostart entry for the tray
 
 ## Dependencies
 

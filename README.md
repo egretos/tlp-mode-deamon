@@ -33,7 +33,8 @@ This installs:
 - `tlp-tray` to `/usr/local/bin`
 - `tlp-mode-root` to `/usr/local/sbin`
 - Systemd user service for the tray
- - Optional user icons via `create-tlp-icons`
+- Optional user icons via `create-tlp-icons`
+- XDG autostart entry for the tray
 
 ## Usage
 

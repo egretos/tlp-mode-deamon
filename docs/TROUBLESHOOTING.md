@@ -4,6 +4,7 @@
 
 - Run `tlp-tray` in a terminal to see errors.
 - Ensure `PySide6` is installed.
+- Check `/etc/xdg/autostart/tlp-tray.desktop` and your user systemd service.
 
 ## Mode switch prompts for password
 

@@ -6,6 +6,7 @@ BINDIR="$PREFIX/bin"
 SBINDIR="$PREFIX/sbin"
 SYSTEMD_USER_DIR="$PREFIX/lib/systemd/user"
 DESKTOP_DIR="$PREFIX/share/applications"
+XDG_AUTOSTART_DIR="/etc/xdg/autostart"
 
 if [[ "$EUID" -ne 0 ]]; then
   echo "Please run as root: sudo ./uninstall.sh" >&2
@@ -24,5 +25,6 @@ rm -f "$BINDIR/tlp-mode" "$BINDIR/tlp-tray" "$BINDIR/create-tlp-icons"
 rm -f "$SBINDIR/tlp-mode-root"
 rm -f "$SYSTEMD_USER_DIR/tlp-tray.service"
 rm -f "$DESKTOP_DIR/tlp-tray.desktop"
+rm -f "$XDG_AUTOSTART_DIR/tlp-tray.desktop"
 
 echo "Uninstalled from $PREFIX."

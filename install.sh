@@ -6,6 +6,7 @@ BINDIR="$PREFIX/bin"
 SBINDIR="$PREFIX/sbin"
 SYSTEMD_USER_DIR="$PREFIX/lib/systemd/user"
 DESKTOP_DIR="$PREFIX/share/applications"
+XDG_AUTOSTART_DIR="/etc/xdg/autostart"
 
 if [[ "$EUID" -ne 0 ]]; then
   echo "Please run as root: sudo ./install.sh" >&2
@@ -18,6 +19,7 @@ install -D -m 0755 "bin/create-tlp-icons" "$BINDIR/create-tlp-icons"
 install -D -m 0755 "root/tlp-mode-root" "$SBINDIR/tlp-mode-root"
 install -D -m 0644 "systemd/tlp-tray.service" "$SYSTEMD_USER_DIR/tlp-tray.service"
 install -D -m 0644 "desktop/tlp-tray.desktop" "$DESKTOP_DIR/tlp-tray.desktop"
+install -D -m 0644 "xdg-autostart/tlp-tray.desktop" "$XDG_AUTOSTART_DIR/tlp-tray.desktop"
 
 TARGET_USER="${SUDO_USER:-}"
 if [[ -n "$TARGET_USER" ]]; then
